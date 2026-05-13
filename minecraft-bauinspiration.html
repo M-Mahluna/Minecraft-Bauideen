@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft Bauinspiration</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --dirt: #8B6340;
+    --grass: #5D9E3A;
+    --stone: #7A7A7A;
+    --wood: #A0762A;
+    --gold: #FFD700;
+    --sky: #87CEEB;
+    --night: #0a0e1a;
+    --glow: #7fffb2;
+    --accent: #ff6b35;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--night);
+    font-family: 'VT323', monospace;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* Starfield background */
+  #stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Main 3D canvas */
+  #cube-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    cursor: grab;
+  }
+  #cube-canvas:active { cursor: grabbing; }
+
+  /* Landing title */
+  #landing-ui {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 40px;
+  }
+
+  #title-block {
+    text-align: center;
+    animation: titleFloat 3s ease-in-out infinite;
+  }
+
+  #title-block h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 2.5vw, 28px);
+    color: var(--glow);
+    text-shadow: 0 0 20px var(--glow), 0 0 40px var(--glow), 2px 2px 0 #000;
+    letter-spacing: 2px;
+    line-height: 1.6;
+  }
+
+  #title-block p {
+    font-family: 'VT323', monospace;
+    font-size: clamp(16px, 2vw, 22px);
+    color: #aee;
+    margin-top: 10px;
+    text-shadow: 1px 1px 0 #000;
+  }
+
+  @keyframes titleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  #hint p {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: rgba(255,255,255,0.6);
+    animation: blink 1.5s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  /* Face labels on cube */
+  .face-label {
+    position: fixed;
+    z-index: 3;
+    pointer-events: none;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: white;
+    text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: none;
+  }
+
+  /* Category overlay */
+  #category-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 10;
+    background: var(--night);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #category-overlay.active { display: flex; }
+
+  #cat-header {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 3px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  #back-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  #back-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: var(--glow);
+    color: var(--glow);
+  }
+
+  #cat-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 2.5vw, 24px);
+    text-shadow: 0 0 20px currentColor;
+  }
+
+  #cat-subtitle {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    opacity: 0.7;
+    margin-left: auto;
+  }
+
+  #ideas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 30px 40px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .idea-card {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .idea-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--card-accent, var(--glow));
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(127,255,178,0.1);
+  }
+
+  .idea-card-thumb {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .idea-card-thumb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.6) 100%);
+  }
+
+  .idea-card-body {
+    padding: 16px;
+  }
+
+  .idea-card-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    margin-bottom: 8px;
+    line-height: 1.6;
+  }
+
+  .idea-card-desc {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+
+  .idea-card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+  }
+
+  .badge.easy { color: #7fff7f; }
+  .badge.medium { color: #ffd700; }
+  .badge.hard { color: #ff6b35; }
+  .badge.time { color: #87ceeb; }
+
+  /* Tutorial overlay */
+  #tutorial-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 20;
+    background: var(--night);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #tutorial-overlay.active { display: flex; }
+
+  #tut-header {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 3px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+
+  #tut-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(12px, 2vw, 18px);
+    line-height: 1.5;
+  }
+
+  #tut-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .tut-section {
+    margin-bottom: 40px;
+  }
+
+  .tut-section h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--glow);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(127,255,178,0.3);
+  }
+
+  .tut-section p, .tut-section li {
+    font-family: 'VT323', monospace;
+    font-size: 19px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .tut-section ul {
+    list-style: none;
+    padding-left: 10px;
+  }
+
+  .tut-section ul li::before {
+    content: '▶ ';
+    color: var(--glow);
+  }
+
+  .materials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .material-item {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px 14px;
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .steps-list {
+    counter-reset: steps;
+  }
+
+  .step-item {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.03);
+    border-left: 3px solid var(--glow);
+    padding: 14px 16px;
+  }
+
+  .step-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--glow);
+    flex-shrink: 0;
+    min-width: 30px;
+  }
+
+  .step-text {
+    font-family: 'VT323', monospace;
+    font-size: 19px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.85);
+  }
+
+  .yt-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    background: #000;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+
+  .yt-container iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+  }
+
+  .yt-placeholder {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    background: rgba(255,0,0,0.1);
+    border: 2px solid rgba(255,0,0,0.3);
+    cursor: pointer;
+  }
+
+  .yt-placeholder-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .yt-play-btn {
+    width: 60px; height: 60px;
+    background: #ff0000;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+
+  .yt-label {
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    padding: 0 20px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--glow); }
+
+  /* Pixel art decorations */
+  .pixel-border {
+    image-rendering: pixelated;
+    box-shadow:
+      inset 2px 2px 0 rgba(255,255,255,0.3),
+      inset -2px -2px 0 rgba(0,0,0,0.5);
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .idea-card {
+    animation: fadeInUp 0.4s ease both;
+  }
+
+  .idea-card:nth-child(1) { animation-delay: 0.05s; }
+  .idea-card:nth-child(2) { animation-delay: 0.10s; }
+  .idea-card:nth-child(3) { animation-delay: 0.15s; }
+  .idea-card:nth-child(4) { animation-delay: 0.20s; }
+  .idea-card:nth-child(5) { animation-delay: 0.25s; }
+  .idea-card:nth-child(6) { animation-delay: 0.30s; }
+
+  /* Tooltip for cube faces */
+  #face-tooltip {
+    position: fixed;
+    z-index: 5;
+    background: rgba(0,0,0,0.85);
+    border: 2px solid var(--glow);
+    padding: 8px 14px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--glow);
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+  }
+
+  /* Click ripple */
+  .click-hint {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    color: rgba(255,255,255,0.4);
+    pointer-events: none;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<canvas id="cube-canvas"></canvas>
+
+<div id="landing-ui">
+  <div id="title-block">
+    <h1>MINECRAFT<br>BAUINSPIRATION</h1>
+    <p>Drehe den Würfel · Wähle eine Welt · Baue etwas Großartiges</p>
+  </div>
+</div>
+
+<div id="hint">
+  <p>↕ Ziehen zum Drehen · Klicken zum Öffnen</p>
+</div>
+
+<div id="face-tooltip"></div>
+
+<!-- Category Screen -->
+<div id="category-overlay">
+  <div id="cat-header">
+    <button id="back-btn" onclick="closeCategory()">← Zurück</button>
+    <div>
+      <div id="cat-title"></div>
+      <div id="cat-subtitle"></div>
+    </div>
+  </div>
+  <div id="ideas-grid"></div>
+</div>
+
+<!-- Tutorial Screen -->
+<div id="tutorial-overlay">
+  <div id="tut-header">
+    <button id="back-btn2" onclick="closeTutorial()">← Zurück</button>
+    <div id="tut-title"></div>
+  </div>
+  <div id="tut-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const categories = [
+  {
+    id: 'japan',
+    name: '🏯 Japan',
+    subtitle: 'Pagoden, Tempel & Zen-Gärten',
+    color: '#e8715a',
+    bgColor: '#2a0f0a',
+    faceEmoji: '🏯',
+    faceText: 'JAPAN',
+    ideas: [
+      {
+        title: 'Fünfstöckige Pagode',
+        emoji: '🏯',
+        desc: 'Eine klassische japanische Pagode mit übereinander gestapelten Dächern und zierlichen Aufwärtsbiegungen.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~6 Stunden',
+        materials: ['🪵 Holzblöcke', '🪨 Ziegelstein', '🧱 Quarzblöcke', '🌿 Farn', '🎋 Bambus', '🔦 Laterne'],
+        steps: [
+          'Fundament 9×9 aus Stein legen und eine 5×5 Plattform aufbauen',
+          'Erste Etage: 3×3 Säulen, 4 hoch, mit Querbalken aus Holztreppen',
+          'Dach der ersten Etage: Treppen nach außen, Enden leicht nach oben biegen',
+          'Schrittweise kleiner werdend: Etage 2–5 jeweils 2 Blöcke schmaler',
+          'Alle Dächer mit Dunkelholz-Treppenblöcken ausgarnieren',
+          'Innenraum mit Papier-Laternen, Teppichen und Bambuspflanzen dekorieren',
+          'Umgebung: Kiesgarten mit Muster aus weißem Kies und Felsblöcken',
+        ],
+        ytSearch: 'Japanese Pagoda Minecraft Tutorial',
+        ytId: 'pagoda_placeholder',
+      },
+      {
+        title: 'Torii-Tor',
+        emoji: '⛩️',
+        desc: 'Das ikonische rote Eingangstor eines japanischen Schreins – perfekt als Eingang zu deiner Japan-Base.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~30 Min',
+        materials: ['🔴 Rote Beton-Blöcke', '🪵 Dunkles Holz', '⬛ Schwarzer Beton'],
+        steps: [
+          'Zwei Säulen aus rotem Beton, 8 Blöcke hoch und 7 Blöcke Abstand',
+          'Oberen Querbalken mit leichtem Überhang (1 Block pro Seite)',
+          'Zweiten dünneren Querbalken 1 Block darunter einsetzen',
+          'Enden des oberen Balkens mit nach oben gebogenen Stufen versehen',
+          'Alles mit roter Farbe oder Betonblöcken einheitlich gestalten',
+          'Laternen und Bambus an die Seiten stellen für Atmosphäre',
+        ],
+        ytSearch: 'Torii Gate Minecraft Tutorial',
+        ytId: 'torii_placeholder',
+      },
+      {
+        title: 'Japanisches Teehaus',
+        emoji: '🍵',
+        desc: 'Ein kleines, gemütliches Teehaus aus Holz und Papier – ein ruhiger Rückzugsort in deiner Welt.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~1 Stunde',
+        materials: ['🪵 Fichten-/Birkenholz', '🧊 Glasscheiben', '🪴 Farn', '🎋 Bambus', '🟫 Braune Teppiche'],
+        steps: [
+          '8×6 Grundriss aus Holzdielen legen',
+          'Wände nur 3 Blöcke hoch – japanische Häuser sind niedrig',
+          'Fensteröffnungen lassen und mit dünnen Glasscheiben schließen',
+          'Walmdach: Holztreppen schräg nach innen stapeln',
+          'Innenraum: Sitzbereich aus Stufen, niedrige Tische aus Druckplatten',
+          'Zen-Garten davor mit Kies, Felsen und Moos-Teppich',
+        ],
+        ytSearch: 'Japanese Tea House Minecraft Tutorial',
+        ytId: 'teahouse_placeholder',
+      },
+      {
+        title: 'Ninja-Dorf',
+        emoji: '🥷',
+        desc: 'Ein geheimes Dorf versteckt in Bambuswäldern mit Trainingsplätzen, Waffen-schmieden und Wohnhäusern.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~10+ Stunden',
+        materials: ['🎋 Bambus (Massen!)', '🪵 Dunkelholz', '🪨 Kopfsteinpflaster', '🕯️ Kerzen', '🔦 Laternen'],
+        steps: [
+          'Einen dichten Bambuswald pflanzen als natürliche Tarnung',
+          'Schmale Pfade zwischen den Häusern anlegen, nicht gerade',
+          'Kleine 5×5 Häuser mit flachen Dächern und Bambuszäunen',
+          'Trainingsplatz: Ziele aus Heuballen, Hindernisparcours',
+          'Schmiede mit Esse, Amboss und Waffenregal aus Itemframes',
+          'Unterirdischen Tunnel verbinden als Fluchtwege',
+          'Nachts: Fackeln sparsam einsetzen für dunkle Atmosphäre',
+        ],
+        ytSearch: 'Minecraft Ninja Village Tutorial',
+        ytId: 'ninja_placeholder',
+      },
+      {
+        title: 'Kirschblüten-Park',
+        emoji: '🌸',
+        desc: 'Ein friedlicher Park mit Kirschbäumen, Steinlaternen, Bänken und einem kleinen Teich.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~2 Stunden',
+        materials: ['🌸 Kirschholz (1.20+)', '🪨 Granit', '💧 Wasser', '🌿 Blumen', '🔦 Laternen'],
+        steps: [
+          'Geschwungene Wege aus poliertem Granit anlegen',
+          'Kirschbäume pflanzen: breite Kronen aus pink-gefärbter Wolle oder Kirschblättern',
+          'Kleinen Teich ausheben, Seerosen platzieren',
+          'Steinlaternen: Granit-Blöcke gestapelt mit Laterne obendrauf',
+          'Holzbänke aus Treppenblöcken und Druckplatten',
+          'Moos und Blumen natürlich verteilen',
+        ],
+        ytSearch: 'Minecraft Cherry Blossom Park Tutorial',
+        ytId: 'cherry_placeholder',
+      },
+      {
+        title: 'Samurai-Burg',
+        emoji: '⚔️',
+        desc: 'Eine imposante Burganlage im Edo-Stil mit hohen Mauern, Wachtürmen und einem zentralen Hauptturm (Tenshu).',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~15+ Stunden',
+        materials: ['🪨 Steinziegel', '🪵 Dunkelholz', '⬛ Schwarzer Beton', '🔦 Laternen', '⛳ Banner'],
+        steps: [
+          'Burgmauer: Steinziegel, 3 Blöcke dick und 8 hoch, mit Zinnen',
+          'Ecktürme einplanen – 5×5, leicht über die Mauer hinaus',
+          'Hauptturm (Tenshu): 15×15 Basis, 5 Etagen, jeweils kleiner werdend',
+          'Jede Etage mit geschwungenem Dach aus Holztreppen abschließen',
+          'Innenhof mit Brunnen, Waffenständern und Garten',
+          'Zugbrücke aus Ketten und Dunkelholz',
+          'Banner in Familienfarben an den Türmen',
+        ],
+        ytSearch: 'Minecraft Japanese Castle Samurai Tutorial',
+        ytId: 'samurai_placeholder',
+      },
+    ],
+  },
+  {
+    id: 'medieval',
+    name: '🏰 Mittelalter',
+    subtitle: 'Burgen, Dörfer & Kathedralen',
+    color: '#c9a84c',
+    bgColor: '#1a1408',
+    faceEmoji: '🏰',
+    faceText: 'MITTELALTER',
+    ideas: [
+      {
+        title: 'Mittelalterliche Burg',
+        emoji: '🏰',
+        desc: 'Eine vollständige Burganlage mit Hauptturm, Ringmauer, Graben und einer kleinen Siedlung im Innenhof.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~20+ Stunden',
+        materials: ['🪨 Steinziegel', '🧱 Mauerstein', '🔗 Ketten', '🪵 Holz', '🔦 Fackeln', '⛳ Banner'],
+        steps: [
+          'Standort wählen: Hügel oder Kliff für natürlichen Vorteil',
+          'Burggraben ausheben, 3 Blöcke tief und 4 breit, mit Wasser füllen',
+          'Ringmauer: 5 Blöcke dick, 10 hoch, mit Zinnen obendrauf',
+          'Vier Ecktürme und ein großes Torhaus mit Fallgitter aus Ketten',
+          'Hauptturm (Keep): 20×20, 25 Blöcke hoch, Wendeltreppe innen',
+          'Innenhof: Schmied, Stall, Brunnen, Lagerhalle',
+          'Äußere Vorburg für Bauernhöfe und Marktstände',
+        ],
+        ytSearch: 'Minecraft Medieval Castle Tutorial',
+        ytId: 'castle_placeholder',
+      },
+      {
+        title: 'Mittelalter-Dorf',
+        emoji: '🏘️',
+        desc: 'Ein lebendiges Dorf mit unterschiedlichen Häusern, einem Marktplatz, einer Kirche und Feldern.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~8 Stunden',
+        materials: ['🪵 Eichenholz', '🧱 Stein', '🌾 Weizen', '🐄 Vieh', '🔦 Fackeln'],
+        steps: [
+          'Straßenplan auf dem Boden vorzeichnen (Pflasterstein)',
+          'Verschiedene Hausgrößen für Abwechslung: 6×8, 8×10, 4×6',
+          'Fachwerk-Stil: Holzrahmen mit Steinausfachung',
+          'Reetdächer aus Heu-Treppenblöcken für arme Häuser',
+          'Marktplatz in der Mitte mit Ständen aus Treppenblöcken',
+          'Kirche als größtes Gebäude mit Kreuzgrundriss',
+          'Felder drumherum, Brunnen, Vorratslager',
+        ],
+        ytSearch: 'Minecraft Medieval Village Tutorial',
+        ytId: 'village_placeholder',
+      },
+      {
+        title: 'Gotische Kathedrale',
+        emoji: '⛪',
+        desc: 'Eine ehrfurchtgebietende Kathedrale mit Spitzbögen, Buntglasfenstern und einem imposanten Mittelturm.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~25+ Stunden',
+        materials: ['🧊 Quarz', '🪨 Polierter Stein', '🔵 Blaues Glas', '🟡 Gelbes Glas', '🕯️ Kerzen'],
+        steps: [
+          'Kreuzgrundriss planen: Hauptschiff 10×40, Querschiff 10×30',
+          'Spitzbögen aus Treppenstufen für alle Öffnungen',
+          'Hohe Seitenmauern mit langen schmalen Fenstern',
+          'Buntglasfenster aus gefärbten Glasblöcken in Mustern setzen',
+          'Fliegende Strebepfeiler außen zur Stabilisierung (dekorativ)',
+          'Zwei Türme am Westeingang, 40+ Blöcke hoch',
+          'Innenraum: Kirchenbänke aus Stufen, Altar, Kerzenhalter',
+        ],
+        ytSearch: 'Minecraft Gothic Cathedral Tutorial',
+        ytId: 'cathedral_placeholder',
+      },
+      {
+        title: 'Taverne & Herberge',
+        emoji: '🍺',
+        desc: 'Ein zweistöckiges Wirtshaus als Treffpunkt deines Dorfes – mit Schankraum, Küche und Zimmern für Reisende.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~2 Stunden',
+        materials: ['🪵 Eichenholz', '🧱 Kopfsteinpflaster', '🛏️ Betten', '🪑 Treppenstufen', '🔦 Fackeln'],
+        steps: [
+          'Grundriss 12×8, Eingang mit Vordach aus Treppenblöcken',
+          'Erdgeschoss: offener Schankraum, Tische und Stühle aus Stufen',
+          'Kamin aus Netherrack und Stein in der Ecke',
+          'Tresen aus Holzdruckplatten, dahinter Fässer aus Fassmuster-Holz',
+          'Obergeschoss: 4–6 kleine Zimmer mit je einem Bett',
+          'Dach im Fachwerkstil mit leichtem Überhang',
+          'Außen: Schild, Fackelhalter, Brunnen davor',
+        ],
+        ytSearch: 'Minecraft Medieval Tavern Tutorial',
+        ytId: 'tavern_placeholder',
+      },
+      {
+        title: 'Ritter-Turm',
+        emoji: '🗼',
+        desc: 'Ein freistehender Wachturm als Außenposten oder Wohnturm für einen einsamen Ritter.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~1 Stunde',
+        materials: ['🧱 Steinziegel', '🪵 Holzdielen', '🔗 Ketten', '⛳ Banner'],
+        steps: [
+          '6×6 Fundament aus Steinziegel legen',
+          'Mauern 20 Blöcke hoch, mit Schießscharten',
+          'Alle 5 Etagen eine Holzdecke einziehen',
+          'Wendeltreppe aus Holztreppen im Uhrzeigersinn aufbauen',
+          'Zinnen oben: Merlons aus Steinziegeln abwechselnd hoch/tief',
+          'Banner in Hausfarben obendrauf',
+          'Kleinen Stall und Lagerschuppen drum herum',
+        ],
+        ytSearch: 'Minecraft Watch Tower Tutorial Medieval',
+        ytId: 'tower_placeholder',
+      },
+      {
+        title: 'Unterirdische Zwergenfestung',
+        emoji: '⛏️',
+        desc: 'Tiefe in einem Berg: eine ausgedehnte Zwergenstadt mit Minen, Schmelzhütten, Thronsaal und Schätzen.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~20+ Stunden',
+        materials: ['🪨 Steinziegel', '🔥 Netherrack', '🥇 Gold', '💎 Diamant (Deko)', '🔦 Glühstein'],
+        steps: [
+          'Einen ganzen Berg von innen aushöhlen',
+          'Zentralen großen Thronsaal ausheben: 30×30×20',
+          'Riesige Säulen aus Steinziegel, die die Decke stützen',
+          'Lavaflüsse als Licht und Atmosphäre einsetzen',
+          'Minen-Tunnelsystem strahlenförmig anlegen',
+          'Schmiede-Bezirk mit Öfen, Ambossen, Eisenregalen',
+          'Schatzkammer mit Golddeko und Itemframes voller Wertgegenstände',
+        ],
+        ytSearch: 'Minecraft Dwarf Fortress Underground Tutorial',
+        ytId: 'dwarf_placeholder',
+      },
+    ],
+  },
+  {
+    id: 'nature',
+    name: '🌿 Natur & Survival',
+    subtitle: 'Baumhäuser, Höhlen & organische Basen',
+    color: '#5D9E3A',
+    bgColor: '#0a1a08',
+    faceEmoji: '🌿',
+    faceText: 'NATUR',
+    ideas: [
+      {
+        title: 'Riesiges Baumhaus',
+        emoji: '🌳',
+        desc: 'Ein mehrstöckiges Baumhaus hoch oben in den Wipfeln – mit Hängebrücken zu Nachbarbäumen.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~4 Stunden',
+        materials: ['🌲 Großer Baum (natürlich wachsen lassen)', '🪵 Holzdielen', '🔗 Ketten', '🌿 Blätter', '🪜 Leitern'],
+        steps: [
+          'Einen natürlichen Großbaum als Basis nutzen oder mit Bonusbaum-Mod wachsen lassen',
+          'Erste Plattform auf Astgabel setzen, ca. 10 Blöcke hoch',
+          'Rundes Häuschen auf der Plattform, 8 Blöcke Durchmesser',
+          'Zweite und dritte Ebene durch den Stamm hindurch',
+          'Hängebrücken zu Nachbarbäumen aus Holzplatten und Kettenhänge',
+          'Seilzug aus Ketten als Aufzug simulieren',
+          'Blätterüberdachung natürlich nachformen',
+        ],
+        ytSearch: 'Minecraft Giant Treehouse Tutorial',
+        ytId: 'treehouse_placeholder',
+      },
+      {
+        title: 'Höhlenbase',
+        emoji: '🦇',
+        desc: 'Deine gesamte Basis versteckt sich in einer natürlichen Höhle – nur wer sucht, findet dich.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~5 Stunden',
+        materials: ['🪨 Verschiedene Steinarten', '🔦 Glühstein', '💧 Wasser', '🌿 Moos', '🍄 Pilze'],
+        steps: [
+          'Große natürliche Höhle finden oder händisch aushöhlen',
+          'Eingang tarnen: Wasserfall davor, oder einfach nur ein Fels',
+          'Boden mit Moos, Kies und Erde abwechseln für natürlichen Look',
+          'Decke mit Stalagmiten aus Spitzen-Blöcken (1.17+)',
+          'Unterirdischen See mit Lichtern im Wasser anlegen',
+          'Verschiedene Bereiche abteilen: Farm, Schmiede, Schlafraum',
+          'Versteckte Falltüren als Geheimeingänge einbauen',
+        ],
+        ytSearch: 'Minecraft Cave Base Tutorial Hidden',
+        ytId: 'cave_placeholder',
+      },
+      {
+        title: 'Naturstein-Cottage',
+        emoji: '🏡',
+        desc: 'Ein urig-organisches Cottage, das aussieht als wäre es aus dem Boden gewachsen – Moos, Steine, Blumen überall.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~2 Stunden',
+        materials: ['🪨 Moos-Stein', '🌿 Moos', '🪵 Birkenholz', '🌸 Blumen', '🟫 Schmutziger Lehm'],
+        steps: [
+          'Unregelmäßigen Grundriss wählen – nichts ist perfekt quadratisch',
+          'Mauern aus Mossstone, Granit, Andesit mischen',
+          'Dach organisch wellig aus Moos und Rasenstufen',
+          'Blumen und Moos wachsen an den Mauern lassen',
+          'Kleiner Gemüsegarten direkt ans Haus',
+          'Steinpfad zum Eingang, unregelmäßig und verwachsen',
+          'Innen: Rustikales Mobiliar, Kamin, Kräuterregale',
+        ],
+        ytSearch: 'Minecraft Cottage Core House Tutorial',
+        ytId: 'cottage_placeholder',
+      },
+      {
+        title: 'Schwimmendes Insel-Dorf',
+        emoji: '🏝️',
+        desc: 'Mehrere schwebende Inseln verbunden durch Brücken und Wasserfälle – ein Dorf in den Wolken.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~12+ Stunden',
+        materials: ['🌱 Erde', '🪨 Stein', '🌿 Gras', '💧 Wasser', '🪵 Holz', '🌳 Bäume'],
+        steps: [
+          'Erste große Basis-Insel in der Luft bauen (20×20)',
+          'Organisch unregelmäßige Form – keine perfekten Würfel',
+          'Unterseite der Insel mit Stein-Zapfen nach unten',
+          'Wasserfälle von den Seiten – optisch und praktisch',
+          'Brücken zwischen den Inseln aus Holz und Seilen',
+          'Auf jeder Insel einen anderen Zweck: Farm, Haus, Schmiede',
+          'Passende Bewohner/NPCs einladen oder Häuser für Deko',
+        ],
+        ytSearch: 'Minecraft Floating Island Village Tutorial',
+        ytId: 'floating_placeholder',
+      },
+      {
+        title: 'Wikinger-Langhaus',
+        emoji: '⚡',
+        desc: 'Ein langes, rustikales Wikinger-Haus aus Holz und Stein mit einer Feuerstelle in der Mitte.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~1,5 Stunden',
+        materials: ['🪵 Dunkles Holz', '🪨 Kopfsteinpflaster', '🔥 Feuer/Netherrack', '⛳ Banner', '🦌 Schädel-Deko'],
+        steps: [
+          'Langer Grundriss: 6×18 aus Kopfsteinpflaster',
+          'Mauern aus Dunkelholz (Fichte/Dunkelholz), 4 Blöcke hoch',
+          'Gewölbtes Holzdach: Treppenblöcke von beiden Seiten einwärts',
+          'Zentraler Langkamin in der Mitte aus Stein',
+          'Wikinger-Schiffsschnitzereien als Banner-Deko',
+          'Runde Schilde an der Außenwand (Banner in Itemframes)',
+          'Umzäunter Bereich mit Tieren und Holzschuppen',
+        ],
+        ytSearch: 'Minecraft Viking Longhouse Tutorial',
+        ytId: 'viking_placeholder',
+      },
+      {
+        title: 'Unterirdische Pilz-Farm',
+        emoji: '🍄',
+        desc: 'Eine magische unterirdische Farm mit riesigen Pilzen, Glowstone-Licht und mystischen Gewächsen.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~3 Stunden',
+        materials: ['🍄 Pilze (riesig)', '🔦 Glühstein', '🌿 Myzel', '💎 Smaragd (Deko)', '🌊 Wasser'],
+        steps: [
+          'Großen Hohlraum underground aushöhlen, 20×20×15',
+          'Boden komplett mit Myzel bedecken',
+          'Riesige Pilze züchten: Knochemehl auf Pilz mit genug Platz',
+          'Glühstein in Decke und Pilze für Licht einsetzen',
+          'Wasserbrunnen in der Mitte mit Leuchtintinten',
+          'Regale aus Holz mit Pilz-Items in Itemframes',
+          'Geheimgang nach draußen für die Ernte',
+        ],
+        ytSearch: 'Minecraft Underground Mushroom Farm Tutorial',
+        ytId: 'mushroom_placeholder',
+      },
+    ],
+  },
+  {
+    id: 'modern',
+    name: '🏙️ Modern',
+    subtitle: 'Städte, Villen & Hochhäuser',
+    color: '#4a9eff',
+    bgColor: '#080d1a',
+    faceEmoji: '🏙️',
+    faceText: 'MODERN',
+    ideas: [
+      {
+        title: 'Moderne Villa',
+        emoji: '🏠',
+        desc: 'Eine elegante moderne Villa mit Pool, Dachterrasse, großen Glasfronten und einem Innen-/Außenbereich.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~4 Stunden',
+        materials: ['🧊 Quarz', '🔲 Schwarz. Beton', '🔵 Glas', '💧 Wasser (Pool)', '🌿 Pflanzen'],
+        steps: [
+          'L-förmiger Grundriss aus weißem Quarz, 20×16',
+          'Flaches oder minimales Dach – keine Giebel',
+          'Große Glasfronten (ganze Wandseiten aus Glasscheiben)',
+          'Farbkontrast: weiß und schwarz, klare Linien',
+          'Pool an der Seite, leicht eingelassen, mit Leuchtintinte',
+          'Dachterrasse mit Holzdeck, Lounge und Grünpflanzen',
+          'Innen: offener Grundriss, minimalistische Möbel',
+        ],
+        ytSearch: 'Minecraft Modern Villa Tutorial 2024',
+        ytId: 'villa_placeholder',
+      },
+      {
+        title: 'Wolkenkratzer',
+        emoji: '🏢',
+        desc: 'Ein beeindruckender Hochhaus-Turm aus Glas und Stahl, der bis in die Wolken reicht.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~10+ Stunden',
+        materials: ['🔵 Blaues Glas', '🔲 Schwarzer Beton', '⬜ Weißer Beton', '🪟 Glasscheiben', '🔦 Lichter'],
+        steps: [
+          '20×20 Grundriss, Außenwände aus Betonrahmen und Glas abwechselnd',
+          'Alle 15 Etagen einen Rücksprung einbauen für Staffelung',
+          'Fahrstuhlschacht in der Mitte (Treppenblöcke)',
+          'Verschiedene Etagen: Büros, Wohnungen, Penthouse oben',
+          'Helipad auf dem Dach aus Beton mit Markierungen',
+          'Lobby im EG mit hohem Atrium und Glas-Decke',
+          'Außen: Beleuchtungsstreifen für Nacht-Atmosphäre',
+        ],
+        ytSearch: 'Minecraft Skyscraper Tutorial Modern',
+        ytId: 'skyscraper_placeholder',
+      },
+      {
+        title: 'Unterirdisches Stadtleben',
+        emoji: '🚇',
+        desc: 'Eine futuristische Untergrundstadt mit U-Bahn, Einkaufszentrum, Wohnblöcken und neonbeleuchtetem Downtown.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~20+ Stunden',
+        materials: ['🔵 Neonblöcke', '⬛ Schwarzer Beton', '🔦 Glühstein', '🔵 Glas', '🟣 Purpur-Blöcke'],
+        steps: [
+          'Riesigen unterirdischen Raum aushöhlen: 100×100×30',
+          'Straßennetz anlegen, beleuchtet mit Glühstein unter Glasplatten',
+          'U-Bahn-Strecke mit Minecart-Schienen durch das gesamte Areal',
+          'Wohnblöcke: mehrstöckige Gebäude mit kleinen Apartments',
+          'Neon-Schilder aus buntem Glas und Leuchträhmen simulieren',
+          'Zentrales Einkaufszentrum mit Atrium und Rolltreppen-Illusion',
+          'Park-Bereich mit künstlichem Licht aus Glühstein und Pflanzen',
+        ],
+        ytSearch: 'Minecraft Underground City Tutorial Cyberpunk',
+        ytId: 'underground_city_placeholder',
+      },
+      {
+        title: 'Glas-Gewächshaus',
+        emoji: '🌱',
+        desc: 'Ein riesiges botanisches Gewächshaus aus Glas und Eisen mit tropischen Pflanzen und einem Wasserfall innen.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~3 Stunden',
+        materials: ['🔵 Glas', '⬛ Eisengitter', '🌿 Pflanzen (alle Arten)', '💧 Wasser', '🔦 Glühstein'],
+        steps: [
+          'Rechteckige Basis 20×15, Wände und Dach komplett aus Glas',
+          'Eisenrahmen für Stabilität und Look einbauen',
+          'Bogendach aus Treppenblöcken in Glas-Variante',
+          'Verschiedene Klimazonen: tropisch, Wüste, gemäßigt aufteilen',
+          'Wasserfall aus der Decke als Mittelpunkt',
+          'Exotische Pflanzen und Bäume aus allen Biomen zusammensammeln',
+          'Beleuchtungsgänge aus Glühstein unter dem Boden',
+        ],
+        ytSearch: 'Minecraft Glass Greenhouse Botanical Garden Tutorial',
+        ytId: 'greenhouse_placeholder',
+      },
+      {
+        title: 'Penthouse Apartment',
+        emoji: '🌃',
+        desc: 'Eine luxuriöse Dachgeschosswohnung hoch über der Skyline – mit Rooftop-Pool, Bar und Panoramafenstern.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~2 Stunden',
+        materials: ['⬜ Quarz', '🔲 Schwarzer Beton', '🔵 Glas', '💧 Pool', '🌿 Topfpflanzen'],
+        steps: [
+          '20×20 offene Fläche auf einem hohen Gebäude wählen',
+          'Glaswände drumherum für den Panoramablick',
+          'Offener Wohnbereich: Sofa aus Stufen, Tisch aus Druckplatten',
+          'Küche: Öfen, Trichter als Spüle, Tisch',
+          'Rooftop-Pool aus blauen Glasblöcken mit Wasser',
+          'Bar-Bereich mit Hockern und Flaschen in Itemframes',
+          'Bett-/Bad-Bereich mit Vorhang aus Bannern abtrennen',
+        ],
+        ytSearch: 'Minecraft Penthouse Apartment Tutorial Modern',
+        ytId: 'penthouse_placeholder',
+      },
+      {
+        title: 'Hafenstadt',
+        emoji: '⛵',
+        desc: 'Eine lebendige moderne Hafenstadt mit Kais, Lagerhäusern, einem Leuchtturm und ankernden Schiffen.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~15+ Stunden',
+        materials: ['🪵 Holz (Massen)', '🪨 Stein', '🔵 Glas', '🚢 Boote', '🔦 Laternen'],
+        steps: [
+          'Küstenlinie mit Wasser als Grundlage wählen',
+          'Holzkais ins Wasser bauen, L-förmig und T-förmig',
+          'Lagerhäuser: große flache Gebäude mit Schiebetüren-Illusion',
+          'Leuchtturm: 30 Blöcke hoch, oben rotierendes Glühstein-Licht',
+          'Verschiedene Schiffstypen: Fischerboot, Frachter, Segelschiff',
+          'Fischmarkt direkt am Kai mit Ständen und Itemframes',
+          'Hafenkneipen und Seemanns-Herbergen am Ufer',
+        ],
+        ytSearch: 'Minecraft Harbor City Port Tutorial',
+        ytId: 'harbor_placeholder',
+      },
+    ],
+  },
+  {
+    id: 'fantasy',
+    name: '⚙️ Steampunk & Fantasy',
+    subtitle: 'Luftschiffe, Magiertürme & magische Welten',
+    color: '#b06bff',
+    bgColor: '#120a1a',
+    faceEmoji: '⚙️',
+    faceText: 'FANTASY',
+    ideas: [
+      {
+        title: 'Fliegendes Luftschiff',
+        emoji: '🚀',
+        desc: 'Ein imposantes Steampunk-Luftschiff mit Holzrumpf, Kupferbeschlägen, Segeln und Dampfmaschinen.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~8+ Stunden',
+        materials: ['🪵 Dunkelholz', '🟠 Kupfer', '🔵 Blaue Wolle (Ballon)', '⚙️ Trichter als Zahnräder', '🔔 Glocken'],
+        steps: [
+          'Bootsförmigen Rumpf aufbauen: unten spitz zulaufend, 30×8',
+          'Querbalken aus Holzstämmen und Eisengittern für Stabilität',
+          'Großen ovalen Ballon aus blauer/brauer Wolle über dem Rumpf',
+          'Seile aus Ketten vom Ballon zum Rumpf spannen',
+          'Steuerrad aus Holztreppenblöcken auf der Brücke',
+          'Dampfmaschinen aus Dampf-Blöcken, Öfen und Trichtern',
+          'Kabinen im Rumpf: Kapitänsquartier, Mannschaftsraum, Lagerraum',
+        ],
+        ytSearch: 'Minecraft Steampunk Airship Tutorial',
+        ytId: 'airship_placeholder',
+      },
+      {
+        title: 'Magierturm',
+        emoji: '🧙',
+        desc: 'Ein hoher, schlanker Magierturm mit einer Sternwarte, Alchemielabor und vielen geheimnisvollen Kammern.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~4 Stunden',
+        materials: ['🟣 Purpur-Blöcke', '🔮 Amethyst', '🌟 Glühstein', '🧪 Braustand', '📚 Bücherregale'],
+        steps: [
+          'Schlanke Basis: 7×7, aber 40+ Blöcke hoch',
+          'Spirale außen: Treppen umwinden den Turm',
+          'Verschiedene Etagen mit veränderndem Material: Stein → Purpur → End-Stein',
+          'Sternwarte oben mit halbkugelförmigem Glasdach',
+          'Alchemielabor: Brauständer, Kessel, Bücherregale',
+          'Bibliothek: Bücherregale von Boden bis Decke',
+          'Magische Portale aus Netherrahmen als Deko (ohne Funktion)',
+        ],
+        ytSearch: 'Minecraft Wizard Tower Tutorial Magic',
+        ytId: 'wizard_placeholder',
+      },
+      {
+        title: 'Elfenwald-Stadt',
+        emoji: '🧝',
+        desc: 'Eine elegante Stadt tief im Wald, wo Häuser und Brücken organisch in die Bäume integriert sind.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~15+ Stunden',
+        materials: ['🌲 Große Bäume', '🌿 Blätter', '🪵 Birkenholz', '🔮 Amethyst', '🌸 Blumen'],
+        steps: [
+          'Dichten alten Wald aus großen 2×2 Stammbäumen pflanzen',
+          'Auf Astgabeln hoch oben Plattformen bauen',
+          'Häuser organisch rund und in die Äste eingebettet',
+          'Hängebrücken zwischen den Baumhäusern',
+          'Spiraltreppen um die Stämme nach oben',
+          'Amethyst und Blumen als magische Lichtquellen',
+          'Wasserfall-Aufzüge zwischen den Etagen',
+        ],
+        ytSearch: 'Minecraft Elven Forest City Tutorial',
+        ytId: 'elven_placeholder',
+      },
+      {
+        title: 'Drachenhöhle',
+        emoji: '🐉',
+        desc: 'Eine riesige vulkanische Höhle als Zuhause eines Drachen – Schätze, Lava, Knochen und Feuer überall.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~10+ Stunden',
+        materials: ['🔥 Lava', '🪨 Basalt', '🟠 Orange. Beton', '🏆 Gold', '💎 Diamant', '🦴 Knochen'],
+        steps: [
+          'Großen runden Hohlraum aushöhlen: 50×50×25',
+          'Wände und Decke unregelmäßig lassen, keine glatten Flächen',
+          'Lavaflüsse von der Decke und aus den Wänden',
+          'Schatzberg in der Mitte aus Gold- und Diamantblöcken',
+          'Drachen-Skulptur aus schwarzem Beton als Boss einbauen',
+          'Riesige Knochen aus Quarz als Skelett-Reste früherer Helden',
+          'Geheimeingang durch Lava-Wasserfall verborgen',
+        ],
+        ytSearch: 'Minecraft Dragon Cave Lair Tutorial',
+        ytId: 'dragon_placeholder',
+      },
+      {
+        title: 'Steampunk-Stadt',
+        emoji: '🔩',
+        desc: 'Eine rauchende, brodelnde Industriestadt mit Röhren, Zahnrädern, Dampfmaschinen und viktorianischen Gebäuden.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~20+ Stunden',
+        materials: ['🟠 Kupfer', '⬛ Schwarzer Beton', '🟫 Braune Wolle', '⚙️ Trichter', '🔔 Glocken', '🌫️ Dampf'],
+        steps: [
+          'Kanalartiges Straßennetz mit Kopfsteinpflaster und Schienen',
+          'Viktorianische Gebäude: hohe schmale Fassaden mit Bogenfenstern',
+          'Riesige Fabrik als Mittelpunkt mit rauchenden Schloten',
+          'Röhrensystem aus Trichtern und Kupferblöcken verbindet alles',
+          'Dampfmaschinen: Öfen, Trichter, Pistons als Mechanik-Deko',
+          'Zeppelin-Ankerturm für dein Luftschiff',
+          'Unterirdisches Rohrnetz und Kanalisation',
+        ],
+        ytSearch: 'Minecraft Steampunk City Tutorial',
+        ytId: 'steampunk_city_placeholder',
+      },
+      {
+        title: 'Feen-Lichtungsgrotte',
+        emoji: '🧚',
+        desc: 'Eine magische Lichtung oder Grotte übersät mit Glühwürmchen-Licht, Pilzen und mystischen Kristallen.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~2 Stunden',
+        materials: ['🔮 Amethyst', '🍄 Pilze', '🌿 Moos', '🌊 Leuchtintinte', '🌸 Blumen'],
+        steps: [
+          'Runde Mulde oder kleinen Halbhöhlen-Bereich formen',
+          'Boden komplett mit Moos bedecken',
+          'Amethystkristalle aus dem Boden wachsen lassen',
+          'Riesige Pilze als Bäume pflanzen',
+          'Wasserbecken mit Leuchtintinten-Partikeln füllen',
+          'Überall Glühkäfer-Laub aus Java-Edition oder Kerzen verteilen',
+          'Kleines Feen-Häuschen aus Pilzkappe und Moos',
+        ],
+        ytSearch: 'Minecraft Fairy Forest Grotto Tutorial',
+        ytId: 'fairy_placeholder',
+      },
+    ],
+  },
+  {
+    id: 'special',
+    name: '🌊 Wasser & Wüste',
+    subtitle: 'Unterwasserbasen & Wüstenarchitektur',
+    color: '#00bcd4',
+    bgColor: '#041016',
+    faceEmoji: '🌊',
+    faceText: 'WASSER & WÜSTE',
+    ideas: [
+      {
+        title: 'Unterwasserstation',
+        emoji: '🔱',
+        desc: 'Eine futuristische Unterwasserbasis aus Glas und Prismarin – voll beleuchtet, mit Blick auf das Meeresleben.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~10+ Stunden',
+        materials: ['🔵 Glas', '🟦 Prismarin', '💧 Wasser draußen', '🔦 Leuchtrahmen', '🐠 Fische'],
+        steps: [
+          'Große flache Meeresebene finden, mindestens 20 Blöcke tief',
+          'Drainierung: mit Sand und Trichtern Wasser aus dem Bereich entfernen (oder Schwamm)',
+          'Rundes oder modulares Gebäude aus Prismarin aufbauen',
+          'Glaskuppeln als Hauptbeobachtungsraum oben',
+          'Glasröhren als Verbindungstunnel zwischen Modulen',
+          'Innen: Leuchtstrahler aus Seelaternen, Aquarium-Deko',
+          'Geheimen Eingang von unten durch Falltür im Boden',
+        ],
+        ytSearch: 'Minecraft Underwater Base Tutorial',
+        ytId: 'underwater_placeholder',
+      },
+      {
+        title: 'Ägyptische Pyramide',
+        emoji: '🏺',
+        desc: 'Eine massive Pyramide aus Sand- und Kalkstein mit Grabkammern, Fallen und einem vergrabenen Schatz.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~5 Stunden',
+        materials: ['🟡 Sandstein', '🟡 Glatter Sandstein', '🪨 Granit', '🔦 Fackeln', '🏺 Keramik'],
+        steps: [
+          'Quadratische Grundfläche abstecken: 40×40',
+          'Jede Schicht um 2 Blöcke kleiner werden lassen',
+          'Außen glatten Sandstein, innen rauhen als Füllmaterial',
+          'Geheimeingang auf einer Seite, versteckt hinter Sandblock',
+          'Innen Labyrinthartige Gänge mit Fallen (Pfeile, Falltüren)',
+          'Grabkammer in der Mitte mit Sarkophag aus Quarz',
+          'Sphinx davor: Löwenkörper mit Menschenkopf aus Sandstein',
+        ],
+        ytSearch: 'Minecraft Egyptian Pyramid Tutorial',
+        ytId: 'pyramid_placeholder',
+      },
+      {
+        title: 'Wüsten-Oasen-Stadt',
+        emoji: '🌴',
+        desc: 'Eine prächtige arabisch inspirierte Stadt rund um eine Oase mit Palmen, Basaren und Minaretten.',
+        difficulty: 'hard',
+        diffLabel: 'Fortgeschritten',
+        time: '~15+ Stunden',
+        materials: ['🟡 Sandstein', '🟠 Terracotta', '🔵 Blaues Glas', '🌴 Dschungelholz', '💧 Wasser'],
+        steps: [
+          'Oase als Mittelpunkt: Teich mit Palmen (Dschungelholz)',
+          'Stadtmauer aus Sandstein mit Bogentoren',
+          'Häuser: Flachdächer, kleine Fenster, kuppelförmige Dachaufbauten',
+          'Farbenfrohes Terracotta als Mosaik an Wänden und Böden',
+          'Basar mit bunten Marktständen und Teppichen',
+          'Minarett: schlanker Turm, 25 Blöcke hoch, Balkon mit Brüstung',
+          'Unterirdisches Wasserkanalnetz für die Oase',
+        ],
+        ytSearch: 'Minecraft Desert Oasis City Tutorial Arabic',
+        ytId: 'oasis_placeholder',
+      },
+      {
+        title: 'Piraten-Versteck',
+        emoji: '🏴‍☠️',
+        desc: 'Eine geheime Piratenbucht mit einem großen Segelschiff, Lagerhöhle, Kanonen und verborgenen Schätzen.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~6 Stunden',
+        materials: ['🪵 Dunkles Holz', '🪨 Stein', '⛵ Boot', '🏴‍☠️ Banner', '🔦 Laterne'],
+        steps: [
+          'Natürliche Bucht mit Felswänden aussuchen oder bauen',
+          'Großes Piratenschiff: Rumpf aus Dunkelholz, 20×7',
+          'Masten aus Holzstämmen, Segel aus weißer Wolle',
+          'Lagerhöhle in der Felswand: Fässer, Truhen, Karten',
+          'Schädelkopf-Banner am Schiff und an der Höhle',
+          'Versteckten Schatz in Sandboden vergraben (Truhe)',
+          'Kanonen aus TNT und schwarzem Beton auf dem Deck',
+        ],
+        ytSearch: 'Minecraft Pirate Cove Base Tutorial',
+        ytId: 'pirate_placeholder',
+      },
+      {
+        title: 'Ozean-Leuchtturm',
+        emoji: '🏮',
+        desc: 'Ein großer Leuchtturm auf einer felsigen Insel – mit Wächterwohnung, Bootshaus und Sturmschutz.',
+        difficulty: 'easy',
+        diffLabel: 'Anfänger',
+        time: '~2 Stunden',
+        materials: ['🟥 Rotes Beton/Stein', '⬜ Weißes Beton', '🔵 Glas', '🔦 Glühstein', '🪵 Holz'],
+        steps: [
+          'Runde Basis auf einer kleinen Insel oder im Wasser: 6 Blöcke Durchmesser',
+          'Wechselnde Ringe aus rotem und weißem Beton, 35 Blöcke hoch',
+          'Jede 5. Etage: kleiner Balkon mit Eisengitter-Brüstung',
+          'Laternenkammer oben: Glühstein umgeben von Glasscheiben',
+          'Wendeltreppe innen aus Holztreppenstufen',
+          'Kleines Bootshaus am Fuß aus Holz',
+          'Wärterhaus daneben, klein aber gemütlich',
+        ],
+        ytSearch: 'Minecraft Lighthouse Tutorial Ocean',
+        ytId: 'lighthouse_placeholder',
+      },
+      {
+        title: 'Versunkene Tempelruine',
+        emoji: '🗿',
+        desc: 'Eine antike Tempelruine, halb von der Erde oder vom Wasser verschluckt – mysteriös und abenteuerlich.',
+        difficulty: 'medium',
+        diffLabel: 'Mittel',
+        time: '~4 Stunden',
+        materials: ['🪨 Moos-Stein', '🌿 Moos', '🟡 Sandstein', '💧 Wasser', '🍄 Pilze'],
+        steps: [
+          'Tempel als vollständig gebautes Gebäude planen',
+          'Dann gezielt Blöcke entfernen oder ersetzen für Ruinen-Look',
+          'Moos und Bewuchs überall einarbeiten',
+          'Teile der Decke eingestürzt – Licht fällt herein',
+          'Wasser läuft in Risse und bildet kleine Tümpel innen',
+          'Teilweise von Sand oder Erde überschüttet lassen',
+          'Rätselhafte Schriftzeichen aus Mapkunst oder Bannern',
+        ],
+        ytSearch: 'Minecraft Ancient Ruins Temple Tutorial',
+        ytId: 'ruins_placeholder',
+      },
+    ],
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STARFIELD
+// ═══════════════════════════════════════════════════════════════
+const starsCanvas = document.getElementById('stars');
+const starsCtx = starsCanvas.getContext('2d');
+
+function resizeStars() {
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  drawStars();
+}
+
+function drawStars() {
+  starsCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * starsCanvas.width;
+    const y = Math.random() * starsCanvas.height;
+    const r = Math.random() * 1.5;
+    starsCtx.beginPath();
+    starsCtx.arc(x, y, r, 0, Math.PI * 2);
+    starsCtx.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.7})`;
+    starsCtx.fill();
+  }
+}
+
+resizeStars();
+window.addEventListener('resize', resizeStars);
+
+// ═══════════════════════════════════════════════════════════════
+// THREE.JS CUBE
+// ═══════════════════════════════════════════════════════════════
+const canvas = document.getElementById('cube-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x000000, 0);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 5);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 5, 5);
+scene.add(dirLight);
+const dirLight2 = new THREE.DirectionalLight(0x7fffb2, 0.3);
+dirLight2.position.set(-5, -3, -5);
+scene.add(dirLight2);
+
+// Create face textures using canvas
+function makeFaceTexture(emoji, text, bgColor, accentColor) {
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+
+  // Background
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, size, size);
+
+  // Pixel grid overlay
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < size; i += 32) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(size, i); ctx.stroke();
+  }
+
+  // Border
+  ctx.strokeStyle = accentColor;
+  ctx.lineWidth = 16;
+  ctx.strokeRect(8, 8, size - 16, size - 16);
+
+  // Corner pixels (Minecraft style)
+  const corners = [[0,0],[size-32,0],[0,size-32],[size-32,size-32]];
+  corners.forEach(([x,y]) => {
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(x, y, 32, 32);
+  });
+
+  // Emoji
+  ctx.font = '140px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, size/2, size/2 - 40);
+
+  // Text
+  ctx.font = 'bold 36px "Courier New", monospace';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 8;
+  ctx.fillText(text, size/2, size/2 + 90);
+  ctx.shadowBlur = 0;
+
+  const texture = new THREE.CanvasTexture(c);
+  return texture;
+}
+
+// Build cube
+const geometry = new THREE.BoxGeometry(2.5, 2.5, 2.5);
+const faceOrder = [
+  // right, left, top, bottom, front, back = Three.js order
+  categories[3], // right = Modern
+  categories[1], // left = Mittelalter
+  categories[4], // top = Fantasy
+  categories[5], // bottom = Wasser/Wüste
+  categories[0], // front = Japan
+  categories[2], // back = Natur
+];
+
+const materials = faceOrder.map(cat => new THREE.MeshLambertMaterial({
+  map: makeFaceTexture(cat.faceEmoji, cat.faceText, cat.bgColor, cat.color),
+  side: THREE.FrontSide,
+}));
+
+const cube = new THREE.Mesh(geometry, materials);
+scene.add(cube);
+
+// Cube outline / edge glow
+const edgesGeo = new THREE.EdgesGeometry(geometry);
+const edgesMat = new THREE.LineBasicMaterial({ color: 0x7fffb2, linewidth: 2, transparent: true, opacity: 0.5 });
+const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+scene.add(edges);
+
+// Face normals for raycasting
+const faceNormals = [
+  new THREE.Vector3(1,0,0),  // right - Modern
+  new THREE.Vector3(-1,0,0), // left - Medieval
+  new THREE.Vector3(0,1,0),  // top - Fantasy
+  new THREE.Vector3(0,-1,0), // bottom - Water/Desert
+  new THREE.Vector3(0,0,1),  // front - Japan
+  new THREE.Vector3(0,0,-1), // back - Nature
+];
+
+// ─── Interaction ───────────────────────────────────────────────
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
+let rotX = 0.3, rotY = 0.5;
+let velX = 0, velY = 0;
+let autoRotate = true;
+let autoTimer = null;
+
+canvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  autoRotate = false;
+  clearTimeout(autoTimer);
+  prevMouse = { x: e.clientX, y: e.clientY };
+  velX = 0; velY = 0;
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDragging) {
+    // Hover tooltip
+    checkHover(e.clientX, e.clientY);
+    return;
+  }
+  const dx = e.clientX - prevMouse.x;
+  const dy = e.clientY - prevMouse.y;
+  velX = dy * 0.01;
+  velY = dx * 0.01;
+  rotX += velX;
+  rotY += velY;
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (!isDragging) return;
+  isDragging = false;
+  autoTimer = setTimeout(() => { autoRotate = true; }, 3000);
+  // Check click vs drag
+  const totalDelta = Math.abs(e.clientX - prevMouse.x) + Math.abs(e.clientY - prevMouse.y);
+  if (Math.abs(velX) < 0.02 && Math.abs(velY) < 0.02) {
+    handleClick(e.clientX, e.clientY);
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  isDragging = false;
+  document.getElementById('face-tooltip').style.display = 'none';
+});
+
+// Touch support
+canvas.addEventListener('touchstart', e => {
+  isDragging = true;
+  autoRotate = false;
+  clearTimeout(autoTimer);
+  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  velX = 0; velY = 0;
+}, { passive: true });
+
+canvas.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const dx = e.touches[0].clientX - prevMouse.x;
+  const dy = e.touches[0].clientY - prevMouse.y;
+  velX = dy * 0.01;
+  velY = dx * 0.01;
+  rotX += velX;
+  rotY += velY;
+  prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+
+canvas.addEventListener('touchend', e => {
+  isDragging = false;
+  autoTimer = setTimeout(() => { autoRotate = true; }, 3000);
+  if (Math.abs(velX) < 0.02 && Math.abs(velY) < 0.02) {
+    handleClick(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }
+});
+
+const raycaster = new THREE.Raycaster();
+const mouse2D = new THREE.Vector2();
+
+function getFaceIndex(intersection) {
+  // faceIndex in geometry corresponds to material index (2 triangles per face)
+  return Math.floor(intersection.faceIndex / 2);
+}
+
+function checkHover(cx, cy) {
+  mouse2D.x = (cx / window.innerWidth) * 2 - 1;
+  mouse2D.y = -(cy / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse2D, camera);
+  const hits = raycaster.intersectObject(cube);
+  const tooltip = document.getElementById('face-tooltip');
+  if (hits.length > 0) {
+    const fi = getFaceIndex(hits[0]);
+    const cat = faceOrder[fi];
+    tooltip.textContent = cat.name;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (cx + 14) + 'px';
+    tooltip.style.top = (cy - 10) + 'px';
+    canvas.style.cursor = 'pointer';
+  } else {
+    tooltip.style.display = 'none';
+    canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+  }
+}
+
+function handleClick(cx, cy) {
+  mouse2D.x = (cx / window.innerWidth) * 2 - 1;
+  mouse2D.y = -(cy / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse2D, camera);
+  const hits = raycaster.intersectObject(cube);
+  if (hits.length > 0) {
+    const fi = getFaceIndex(hits[0]);
+    const cat = faceOrder[fi];
+    openCategory(cat);
+  }
+}
+
+// ─── Animation loop ────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (!isDragging) {
+    if (autoRotate) {
+      rotY += 0.004;
+      rotX += 0.001;
+    } else {
+      velX *= 0.94;
+      velY *= 0.94;
+      rotX += velX;
+      rotY += velY;
+    }
+  }
+
+  cube.rotation.x = rotX;
+  cube.rotation.y = rotY;
+  edges.rotation.x = rotX;
+  edges.rotation.y = rotY;
+
+  // Pulse edge glow
+  const t = Date.now() * 0.001;
+  edgesMat.opacity = 0.3 + Math.sin(t * 2) * 0.2;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CATEGORY & TUTORIAL LOGIC
+// ═══════════════════════════════════════════════════════════════
+let currentCategory = null;
+let currentIdea = null;
+
+function openCategory(cat) {
+  currentCategory = cat;
+  document.getElementById('category-overlay').classList.add('active');
+  document.getElementById('cat-title').textContent = cat.name;
+  document.getElementById('cat-title').style.color = cat.color;
+  document.getElementById('cat-subtitle').textContent = cat.subtitle;
+  document.getElementById('category-overlay').style.background = cat.bgColor;
+
+  const grid = document.getElementById('ideas-grid');
+  grid.innerHTML = '';
+
+  cat.ideas.forEach((idea, idx) => {
+    const card = document.createElement('div');
+    card.className = 'idea-card';
+    card.style.setProperty('--card-accent', cat.color);
+    card.innerHTML = `
+      <div class="idea-card-thumb" style="background: linear-gradient(135deg, ${cat.bgColor}, ${cat.color}33)">
+        <span style="position:relative;z-index:1">${idea.emoji}</span>
+      </div>
+      <div class="idea-card-body">
+        <div class="idea-card-title">${idea.title}</div>
+        <div class="idea-card-desc">${idea.desc}</div>
+        <div class="idea-card-meta">
+          <span class="badge ${idea.difficulty}">${idea.diffLabel}</span>
+          <span class="badge time">⏱ ${idea.time}</span>
+        </div>
+      </div>
+    `;
+    card.style.animationDelay = (idx * 0.05) + 's';
+    card.onclick = () => openTutorial(cat, idea);
+    grid.appendChild(card);
+  });
+}
+
+function closeCategory() {
+  document.getElementById('category-overlay').classList.remove('active');
+}
+
+function openTutorial(cat, idea) {
+  currentIdea = idea;
+  document.getElementById('tutorial-overlay').classList.add('active');
+  document.getElementById('tut-title').textContent = `${idea.emoji} ${idea.title}`;
+  document.getElementById('tut-title').style.color = cat.color;
+  document.getElementById('tutorial-overlay').style.background = cat.bgColor;
+
+  const content = document.getElementById('tut-content');
+  content.innerHTML = `
+    <!-- Meta -->
+    <div class="tut-section">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+        <span class="badge ${idea.difficulty}" style="font-size:16px;padding:6px 14px">${idea.diffLabel}</span>
+        <span class="badge time" style="font-size:16px;padding:6px 14px">⏱ ${idea.time}</span>
+      </div>
+      <p>${idea.desc}</p>
+    </div>
+
+    <!-- Materials -->
+    <div class="tut-section">
+      <h3>📦 BENÖTIGTE MATERIALIEN</h3>
+      <div class="materials-grid">
+        ${idea.materials.map(m => `<div class="material-item">${m}</div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="tut-section">
+      <h3>📋 BAUANLEITUNG</h3>
+      <div class="steps-list">
+        ${idea.steps.map((s, i) => `
+          <div class="step-item">
+            <span class="step-num">${String(i+1).padStart(2,'0')}</span>
+            <span class="step-text">${s}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- YouTube -->
+    <div class="tut-section">
+      <h3>🎬 VIDEO-TUTORIAL</h3>
+      <div class="yt-placeholder" onclick="searchYouTube('${encodeURIComponent(idea.ytSearch)}')">
+        <div class="yt-placeholder-inner">
+          <div class="yt-play-btn">▶</div>
+          <div class="yt-label">
+            Klicke hier, um ein passendes Tutorial auf YouTube zu suchen:<br>
+            <strong style="color:white">"${idea.ytSearch}"</strong>
+          </div>
+          <div style="font-family:'VT323';font-size:14px;color:rgba(255,255,255,0.4);margin-top:8px">
+            Öffnet YouTube-Suche in neuem Tab
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function searchYouTube(query) {
+  window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+}
+
+function closeTutorial() {
+  document.getElementById('tutorial-overlay').classList.remove('active');
+}
+</script>
+</body>
+</html>
