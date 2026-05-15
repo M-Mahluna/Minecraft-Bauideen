@@ -1552,7 +1552,7 @@ function openTutorial(cat, idea) {
     <div class="tut-section">
       <h3>🎬 VIDEO-TUTORIAL</h3>
       <a href="https://www.youtube.com/watch?v=${idea.ytId}" target="_blank" class="yt-thumb-link">
-        <div class="yt-thumb-img" style="background-image:${localStorage.getItem('cookie_consent') === 'accepted' ? `url('https://img.youtube.com/vi/${idea.ytId}/maxresdefault.jpg')` : 'none'}"></div>
+        <div class="yt-thumb-img" style="background-image:${localStorage.getItem('cookie_consent') === 'accepted' ? `url('https://img.youtube.com/vi/${idea.ytId}/hqdefault.jpg')` : 'none'}"></div>
         <div class="yt-thumb-overlay" style="opacity:${localStorage.getItem('cookie_consent') === 'accepted' ? '0' : '1'}">
           <div class="yt-play-btn">▶</div>
           <span>${localStorage.getItem('cookie_consent') === 'accepted' ? 'Auf YouTube ansehen' : 'Auf YouTube ansehen (Vorschau deaktiviert)'}</span>
